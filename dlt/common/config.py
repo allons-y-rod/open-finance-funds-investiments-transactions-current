@@ -1,6 +1,6 @@
 from pyspark.sql.streaming import DataStreamReader
 
-INPUT_PATH = "/Volumes/funds-investiments-transactions-current/landing/"
+INPUT_PATH = "/Volumes/open-finance-funds-investiments-transactions-current/funds-investiments-transactions-current/landing"
 
 CLOUDFILES_OPTIONS = {
     "cloudFiles.format": "json",
