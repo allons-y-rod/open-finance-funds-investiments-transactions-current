@@ -12,7 +12,7 @@ CLOUDFILES_OPTIONS = {
 }
 
 def cloudfiles_reader(reader: DataStreamReader) -> DataStreamReader:
-    reader = reader.fomart("cloudFiles")
+    reader = reader.format("cloudFiles")
 
     for option, value in CLOUDFILES_OPTIONS.items():
         reader = reader.option(option,value)
