@@ -3,6 +3,9 @@ from pyspark.sql import functions as F
 from pyspark.sql.streaming import StreamingQuery
 from pyspark.sql.types import DecimalType
 
+import sys
+sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current")
+
 from common.config import CHECKPOINT_PATH, INPUT_PATH, TARGET_TABLE, cloudfiles_reader
 from common.schemas import transactions_current_schema
 from common.spark import spark
