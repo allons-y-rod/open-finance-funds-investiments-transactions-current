@@ -12,6 +12,17 @@ from common.spark import spark
 
 SCHEMA = transactions_current_schema()
 
+EXPECTATIONS = {
+    "valid_business_key": "transaction_id IS NOT NULL AND client_id IS NOT NULL"
+}
+
+
+def _log_expectations(batch_df: DataFrame, batch_id: int) -> None:
+    total = batch_df.count()
+    for name, condition in EXPECTATIONS.items():
+        violations = batch_df.where(f"NOT ({condition})").count()
+        print(f"[batch {batch_id}] expectation '{name}' violated by {violations}/{total} rows")
+
 
 def create_target_table() -> None:
     spark.sql(f"""
@@ -106,15 +117,18 @@ def read_bronze_stream() -> DataFrame:
     )
 
 
+def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
+    _log_expectations(batch_df, batch_id)
+    batch_df.write.format("delta").mode("append").saveAsTable(TARGET_TABLE)
+
+
 def start_bronze_stream() -> StreamingQuery:
     create_target_table()
     bronze_stream = read_bronze_stream()
 
     return (
         bronze_stream.writeStream
-        .foreachBatch(
-            lambda batch_df, batch_id: batch_df.write.format("delta").mode("append").saveAsTable(TARGET_TABLE)
-        )
+        .foreachBatch(_write_batch)
         .option("checkpointLocation", CHECKPOINT_PATH)
         .trigger(availableNow=True)
         .start()
