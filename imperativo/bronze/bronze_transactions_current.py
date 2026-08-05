@@ -84,11 +84,36 @@ def create_target_table() -> None:
 def create_rejected_table() -> None:
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS {REJECTED_TABLE} (
-            rescue_data     STRING,
-            failure_reason  STRING,
-            source_file     STRING,
-            batch_id        BIGINT,
-            rejected_at     TIMESTAMP
+            client_id                          STRING,
+            investiment_id                     STRING,
+            transaction_id                     STRING,
+            type                               STRING,
+            transaction_type                   STRING,
+            transaction_type_additional_info   STRING,
+            transaction_conversion_date        DATE,
+            transaction_quota_price_amount     DECIMAL(20, 2),
+            transaction_quota_price_currency   STRING,
+            transaction_quota_quantity         DECIMAL(20, 2),
+            transaction_value_amount           DECIMAL(20, 2),
+            transaction_value_currency         STRING,
+            transaction_gross_value_amount     DECIMAL(20, 2),
+            transaction_gross_value_currency   STRING,
+            income_tax_amount                  DECIMAL(20, 2),
+            income_tax_currency                STRING,
+            financial_transaction_tax_amount   DECIMAL(20, 2),
+            financial_transaction_tax_currency STRING,
+            transaction_exit_fee_amount        DECIMAL(20, 2),
+            transaction_exit_fee_currency      STRING,
+            transaction_net_value_amount       DECIMAL(20, 2),
+            transaction_net_value_currency     STRING,
+            source_file                        STRING,
+            ingestion_ts                       TIMESTAMP,
+            ingestion_date                     DATE,
+            _rescued_data                      STRING,
+            transaction_conversion_month       STRING,
+            failure_reason                     STRING,
+            batch_id                           BIGINT,
+            rejected_at                        TIMESTAMP
         )
         USING DELTA
         COMMENT 'Quarentena - Bronze layer - Fundos de Investimentos - Transactions Current - linhas que falharam expectations'
@@ -161,9 +186,8 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
         (
             rejected_df
             .select(
-                F.to_json(F.struct(*original_columns)).alias("rescue_data"),
+                *original_columns,
                 F.col("_failure_reason").alias("failure_reason"),
-                F.col("source_file"),
                 F.lit(batch_id).alias("batch_id"),
                 F.current_timestamp().alias("rejected_at"),
             )
