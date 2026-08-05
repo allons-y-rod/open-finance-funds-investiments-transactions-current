@@ -9,8 +9,9 @@ import sys
 sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current")
 
 from common.config import CHECKPOINT_PATH, INPUT_PATH, REJECTED_TABLE, TARGET_TABLE, cloudfiles_reader
-from common.schemas import transactions_current_schema
 from common.spark import spark
+from schemas_bronze import transactions_current_schema
+from tables_bronze import create_rejected_table, create_target_table
 
 SCHEMA = transactions_current_schema()
 
@@ -22,6 +23,13 @@ EXPECTATIONS = {
         "transaction_id IS NOT NULL AND transaction_id != '' "
         "AND client_id IS NOT NULL AND client_id != ''"
     )
+}
+
+REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
+    "ingestion_ts",
+    "ingestion_date",
+    "_rescued_data",
+    "transaction_conversion_month",
 }
 
 
@@ -41,84 +49,6 @@ def _split_batch(batch_df: DataFrame) -> tuple[DataFrame, DataFrame]:
     rejected_df = enriched.where(F.col("_failure_reason") != "")
 
     return valid_df, rejected_df
-
-
-def create_target_table() -> None:
-    spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {TARGET_TABLE} (
-            client_id                          STRING,
-            investiment_id                     STRING,
-            transaction_id                     STRING,
-            type                               STRING,
-            transaction_type                   STRING,
-            transaction_type_additional_info   STRING,
-            transaction_conversion_date        DATE,
-            transaction_quota_price_amount     DECIMAL(20, 2),
-            transaction_quota_price_currency   STRING,
-            transaction_quota_quantity         DECIMAL(20, 2),
-            transaction_value_amount           DECIMAL(20, 2),
-            transaction_value_currency         STRING,
-            transaction_gross_value_amount     DECIMAL(20, 2),
-            transaction_gross_value_currency   STRING,
-            income_tax_amount                  DECIMAL(20, 2),
-            income_tax_currency                STRING,
-            financial_transaction_tax_amount   DECIMAL(20, 2),
-            financial_transaction_tax_currency STRING,
-            transaction_exit_fee_amount        DECIMAL(20, 2),
-            transaction_exit_fee_currency      STRING,
-            transaction_net_value_amount       DECIMAL(20, 2),
-            transaction_net_value_currency     STRING,
-            source_file                        STRING,
-            ingestion_ts                       TIMESTAMP,
-            ingestion_date                     DATE,
-            _rescued_data                      STRING,
-            transaction_conversion_month       STRING
-        )
-        USING DELTA
-        CLUSTER BY (transaction_conversion_month, transaction_id)
-        COMMENT 'Bronze layer - Fundos de Investimentos - Transactions Current'
-        TBLPROPERTIES ('quality' = 'bronze')
-    """)
-
-
-def create_rejected_table() -> None:
-    spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {REJECTED_TABLE} (
-            client_id                          STRING,
-            investiment_id                     STRING,
-            transaction_id                     STRING,
-            type                               STRING,
-            transaction_type                   STRING,
-            transaction_type_additional_info   STRING,
-            transaction_conversion_date        DATE,
-            transaction_quota_price_amount     DECIMAL(20, 2),
-            transaction_quota_price_currency   STRING,
-            transaction_quota_quantity         DECIMAL(20, 2),
-            transaction_value_amount           DECIMAL(20, 2),
-            transaction_value_currency         STRING,
-            transaction_gross_value_amount     DECIMAL(20, 2),
-            transaction_gross_value_currency   STRING,
-            income_tax_amount                  DECIMAL(20, 2),
-            income_tax_currency                STRING,
-            financial_transaction_tax_amount   DECIMAL(20, 2),
-            financial_transaction_tax_currency STRING,
-            transaction_exit_fee_amount        DECIMAL(20, 2),
-            transaction_exit_fee_currency      STRING,
-            transaction_net_value_amount       DECIMAL(20, 2),
-            transaction_net_value_currency     STRING,
-            source_file                        STRING,
-            ingestion_ts                       TIMESTAMP,
-            ingestion_date                     DATE,
-            _rescued_data                      STRING,
-            transaction_conversion_month       STRING,
-            failure_reason                     STRING,
-            batch_id                           BIGINT,
-            rejected_at                        TIMESTAMP
-        )
-        USING DELTA
-        COMMENT 'Quarentena - Bronze layer - Fundos de Investimentos - Transactions Current - linhas que falharam expectations'
-        TBLPROPERTIES ('quality' = 'bronze_rejected')
-    """)
 
 
 def read_bronze_stream() -> DataFrame:
@@ -177,7 +107,7 @@ def read_bronze_stream() -> DataFrame:
 
 
 def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
-    original_columns = batch_df.columns
+    payload_columns = [c for c in batch_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
     valid_df, rejected_df = _split_batch(batch_df)
 
     rejected_count = rejected_df.count()
@@ -186,10 +116,14 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
         (
             rejected_df
             .select(
-                *original_columns,
-                F.col("_failure_reason").alias("failure_reason"),
-                F.lit(batch_id).alias("batch_id"),
-                F.current_timestamp().alias("rejected_at"),
+                F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
+                F.col("_failure_reason").cast("string").alias("failure_reason"),
+                F.lit(batch_id).cast("bigint").alias("batch_id"),
+                F.current_timestamp().cast("timestamp").alias("rejected_at"),
+            )
+            .withColumn(
+                "rejected_at_month",
+                F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
             )
             .write.format("delta").mode("append").saveAsTable(REJECTED_TABLE)
         )
