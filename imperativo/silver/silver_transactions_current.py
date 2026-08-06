@@ -10,7 +10,10 @@ sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_inv
 
 from common.config import BRONZE_TABLE, SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
 from common.spark import spark
+from schema_silver import create_silver_schema
 from tables_silver import create_silver_rejected_table, create_silver_table
+
+create_silver_schema()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("silver_transactions_current")
