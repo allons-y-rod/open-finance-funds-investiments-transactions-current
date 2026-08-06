@@ -1,11 +1,16 @@
-from common.config import SILVER_REJECTED_TABLE, SILVER_TABLE
+from common.config import SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
 from common.spark import spark
 
 SILVER_SCHEMA = ".".join(SILVER_TABLE.split(".")[:2])
+SILVER_CHECKPOINTS_VOLUME = ".".join(SILVER_CHECKPOINT_PATH.strip("/").split("/")[1:4])
 
 
 def create_silver_schema() -> None:
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {SILVER_SCHEMA}")
+
+
+def create_silver_checkpoints_volume() -> None:
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {SILVER_CHECKPOINTS_VOLUME}")
 
 
 def create_silver_table() -> None:
