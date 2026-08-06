@@ -7,7 +7,12 @@ sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_inv
 
 from common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE, INPUT_PATH, cloudfiles_reader
 from common.spark import spark
-from tables_bronze_config import create_bronze_schema, create_bronze_table, transactions_current_schema
+from tables_bronze_config import (
+    create_bronze_checkpoints_volume,
+    create_bronze_schema,
+    create_bronze_table,
+    transactions_current_schema,
+)
 
 create_bronze_schema()
 
@@ -63,6 +68,7 @@ def read_bronze_stream() -> DataFrame:
 
 
 def start_bronze_stream() -> StreamingQuery:
+    create_bronze_checkpoints_volume()
     create_bronze_table()
     bronze_stream = read_bronze_stream()
 

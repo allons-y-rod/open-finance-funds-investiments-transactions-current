@@ -1,4 +1,4 @@
-from common.config import BRONZE_TABLE
+from common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE
 from common.spark import spark
 
 from pyspark.sql.types import (
@@ -9,10 +9,15 @@ from pyspark.sql.types import (
 )
 
 BRONZE_SCHEMA = ".".join(BRONZE_TABLE.split(".")[:2])
+BRONZE_CHECKPOINTS_VOLUME = ".".join(BRONZE_CHECKPOINT_PATH.strip("/").split("/")[1:4])
 
 
 def create_bronze_schema() -> None:
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {BRONZE_SCHEMA}")
+
+
+def create_bronze_checkpoints_volume() -> None:
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {BRONZE_CHECKPOINTS_VOLUME}")
 
 
 
