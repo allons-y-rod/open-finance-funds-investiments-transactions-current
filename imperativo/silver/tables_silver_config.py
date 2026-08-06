@@ -56,7 +56,6 @@ def create_silver_rejected_table() -> None:
         CREATE TABLE IF NOT EXISTS {SILVER_REJECTED_TABLE} (
             data                STRING,
             failure_reason      STRING,
-            batch_id            BIGINT,
             rejected_at         TIMESTAMP,
             rejected_at_month   STRING
         )

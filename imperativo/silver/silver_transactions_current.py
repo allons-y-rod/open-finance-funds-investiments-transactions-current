@@ -129,7 +129,6 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
             .select(
                 F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
                 F.col("_failure_reason").cast("string").alias("failure_reason"),
-                F.lit(batch_id).cast("bigint").alias("batch_id"),
                 F.current_timestamp().cast("timestamp").alias("rejected_at"),
             )
             .withColumn(
