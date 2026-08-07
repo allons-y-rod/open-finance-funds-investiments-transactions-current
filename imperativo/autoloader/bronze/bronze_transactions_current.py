@@ -3,7 +3,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.streaming import StreamingQuery
 
 import sys
-sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current")
+sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
 
 from common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE, INPUT_PATH, cloudfiles_reader
 from common.spark import spark
@@ -64,6 +64,9 @@ def read_bronze_stream() -> DataFrame:
         "ingestion_ts",
         "ingestion_date",
         "_rescued_data",
+        F.date_format(F.col("transaction.transactionConversionDate"), "yyyy-MM").alias(
+            "transaction_conversion_month"
+        ),
     )
 
 
