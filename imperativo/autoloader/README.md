@@ -393,6 +393,32 @@ imperativo/autoloader/
       Clustering, não um `PARTITIONED BY` Hive literal (esse padrão de partição Hive só é usado
       nas tabelas de rechaço, por `rejected_at_month`).
 
+15. **`PRIMARY KEY` informativa em `SILVER_TABLE` (`client_id`, `transaction_id`), motivada pelos
+    Performance Insights do Databricks**
+    - Após rodar o pipeline, o Databricks reportou duas recomendações de performance: (1) Photon
+      não acelera `bitmapaggregator` (agregador interno do Delta pra resolver Deletion Vectors —
+      esperado sempre que um `MERGE` roda contra uma tabela com Deletion Vectors habilitados, sem
+      correção via código); e (2) "Redundant Object Hash Aggregate on fileInScanId,
+      deletionVectorId... considere aplicar constraints de chave primária/estrangeira" — o
+      otimizador precisa verificar, a cada `MERGE`, que a chave de origem casa com no máximo uma
+      linha de destino; sem uma PK declarada ele faz isso via agregação extra a cada execução.
+    - A única tabela deste pipeline que roda `MERGE` é a `SILVER_TABLE`, via `_upsert_valid()`
+      (`silver_transactions_current.py`) — a `BRONZE_TABLE` só faz `append` nativo, não deveria
+      gerar esse padrão.
+    - `client_id`/`transaction_id` viraram `STRING NOT NULL` (exigência do Unity Catalog pra
+      colunas de chave primária) e uma `CONSTRAINT pk_silver_transactions_current PRIMARY KEY
+      (client_id, transaction_id)` foi adicionada ao DDL de `create_silver_table()` — mesma dupla
+      de colunas já usada em `TRANSACTION_BUSINESS_KEY` pra deduplicação/merge. Como no Unity
+      Catalog PK/FK em Delta são só informativas (não enforced em runtime), isso não muda
+      comportamento nem adiciona validação — é só o otimizador passando a confiar numa unicidade
+      que o `_upsert_valid()` já garante na prática.
+    - Como as outras colunas de `create_silver_table()`, isso só se aplica numa tabela criada do
+      zero (`CREATE TABLE IF NOT EXISTS` é no-op se a tabela já existe) — numa `SILVER_TABLE` já
+      existente seria preciso um `ALTER TABLE ... ADD CONSTRAINT` separado.
+    - Não testado em cluster real ainda — vale confirmar que a sintaxe `CONSTRAINT ... PRIMARY
+      KEY (...)` é aceita na versão do Databricks Runtime/Unity Catalog do ambiente antes de
+      rodar em produção.
+
 ## Diferenças em relação ao pipeline declarativo original
 
 | Aspecto | Declarativo (`dlt/bronze`) | Imperativo — bronze (`imperativo/autoloader/bronze`) | Imperativo — silver (`imperativo/autoloader/silver`) |
