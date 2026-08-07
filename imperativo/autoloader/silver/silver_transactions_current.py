@@ -7,7 +7,7 @@ from pyspark.sql.streaming import StreamingQuery
 from pyspark.sql.types import DecimalType
 
 import sys
-sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current")
+sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
 
 from common.config import BRONZE_TABLE, SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
 from common.spark import spark

@@ -1,0 +1,4 @@
+INPUT_PATH = "/Volumes/imperative_open_finance_funds_investiments_transactions_current/bronze/landing"
+
+BRONZE_TABLE = "imperative_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current"
+BRONZE_REJECTED_TABLE = "imperative_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current_rechaco"
