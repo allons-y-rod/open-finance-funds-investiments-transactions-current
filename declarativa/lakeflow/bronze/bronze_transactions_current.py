@@ -8,7 +8,7 @@ SCHEMA = transactions_current_schema()
 
 
 @dp.table(
-    name="bronze_transactions_current",
+    name="dlt_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current",
     comment="Bronze layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "bronze"},
     cluster_by=["transaction_conversion_month", "transaction_id"],

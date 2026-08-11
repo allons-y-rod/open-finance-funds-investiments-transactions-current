@@ -36,7 +36,7 @@ def silver_transactions_current_valid():
 
 
 @dp.table(
-    name="silver_transactions_current",
+    name="dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current",
     comment="Silver layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "silver"},
     cluster_by=["transaction_conversion_month"],
@@ -57,7 +57,7 @@ def silver_transactions_current():
 
 
 @dp.table(
-    name="silver_transactions_current_rechaco",
+    name="dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current_rechaco",
     comment=(
         "Quarentena - Silver layer - Fundos de Investimentos - Transactions Current - "
         "linhas que falharam expectations"
