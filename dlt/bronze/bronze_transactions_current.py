@@ -2,7 +2,7 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
 from common.config import INPUT_PATH, cloudfiles_reader
-from common.schemas import transactions_current_schema
+from dlt.bronze.table_bronze_tc_config import transactions_current_schema
 
 SCHEMA = transactions_current_schema()
 
