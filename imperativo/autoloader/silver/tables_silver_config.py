@@ -16,9 +16,9 @@ def create_silver_checkpoints_volume() -> None:
 def create_silver_table() -> None:
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS {SILVER_TABLE} (
-            client_id                          STRING,
+            client_id                          STRING NOT NULL,
             investiment_id                     STRING,
-            transaction_id                     STRING,
+            transaction_id                     STRING NOT NULL,
             type                               STRING,
             transaction_type                   STRING,
             transaction_type_additional_info   STRING,
@@ -42,10 +42,11 @@ def create_silver_table() -> None:
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
             _rescued_data                      STRING,
-            transaction_conversion_month       STRING
+            transaction_conversion_month       DATE,
+            CONSTRAINT pk_silver_transactions_current PRIMARY KEY (client_id, transaction_id)
         )
         USING DELTA
-        CLUSTER BY (transaction_conversion_month, transaction_id)
+        CLUSTER BY (transaction_conversion_month)
         COMMENT 'Silver layer - Fundos de Investimentos - Transactions Current'
         TBLPROPERTIES ('quality' = 'silver')
     """)

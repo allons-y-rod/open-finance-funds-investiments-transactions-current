@@ -64,9 +64,9 @@ def read_bronze_stream() -> DataFrame:
         "ingestion_ts",
         "ingestion_date",
         "_rescued_data",
-        F.date_format(F.col("transaction.transactionConversionDate"), "yyyy-MM").alias(
-            "transaction_conversion_month"
-        ),
+        F.to_date(
+            F.date_format(F.col("transaction.transactionConversionDate"), "yyyy-MM"), "yyyy-MM"
+        ).alias("transaction_conversion_month"),
     )
 
 

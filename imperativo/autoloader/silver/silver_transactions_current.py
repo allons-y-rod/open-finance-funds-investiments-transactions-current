@@ -53,10 +53,6 @@ def _cast_columns(batch_df: DataFrame) -> DataFrame:
         .withColumn("financial_transaction_tax_amount", F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)))
         .withColumn("transaction_exit_fee_amount"     , F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)))
         .withColumn("transaction_net_value_amount"    , F.col("transaction_net_value_amount").cast(DecimalType(20, 2)))
-        .withColumn(
-            "transaction_conversion_month",
-            F.date_format(F.col("transaction_conversion_date"), "yyyy-MM"),
-        )
     )
 
 
