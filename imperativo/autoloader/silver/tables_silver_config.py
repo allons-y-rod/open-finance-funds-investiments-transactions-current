@@ -46,7 +46,7 @@ def create_silver_table() -> None:
             CONSTRAINT pk_silver_transactions_current PRIMARY KEY (client_id, transaction_id)
         )
         USING DELTA
-        CLUSTER BY (transaction_conversion_month, transaction_id)
+        CLUSTER BY (transaction_conversion_month)
         COMMENT 'Silver layer - Fundos de Investimentos - Transactions Current'
         TBLPROPERTIES ('quality' = 'silver')
     """)
