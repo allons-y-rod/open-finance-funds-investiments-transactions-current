@@ -42,7 +42,7 @@ def create_silver_table() -> None:
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
             _rescued_data                      STRING,
-            transaction_conversion_month       STRING,
+            transaction_conversion_month       DATE,
             CONSTRAINT pk_silver_transactions_current PRIMARY KEY (client_id, transaction_id)
         )
         USING DELTA

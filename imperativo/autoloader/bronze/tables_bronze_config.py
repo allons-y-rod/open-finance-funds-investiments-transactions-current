@@ -84,7 +84,7 @@ def create_bronze_table() -> None:
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
             _rescued_data                      STRING,
-            transaction_conversion_month       STRING
+            transaction_conversion_month       DATE
         )
         USING DELTA
         CLUSTER BY (transaction_conversion_month, transaction_id)
