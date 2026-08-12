@@ -1,5 +1,4 @@
 from pyspark import pipelines as dp
-from pyspark.sql import Window
 from pyspark.sql import functions as F
 from pyspark.sql.types import DecimalType
 
@@ -11,12 +10,13 @@ from declarativa.lakeflow.silver.table_silver_tc_config import (
 )
 
 BRONZE_TABLE = "bronze_transactions_current"
+SILVER_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current"
 
 
 @dp.view(name="silver_transactions_current_casted")
 def silver_transactions_current_casted():
     return (
-        spark.read.table(BRONZE_TABLE)
+        dp.read_stream(BRONZE_TABLE)
         .withColumn("transaction_conversion_date"     , F.col("transaction_conversion_date").cast("date"))
         .withColumn("transaction_quota_price_amount"  , F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)))
         .withColumn("transaction_quota_quantity"      , F.col("transaction_quota_quantity").cast(DecimalType(20, 2)))
@@ -32,28 +32,22 @@ def silver_transactions_current_casted():
 @dp.view(name="silver_transactions_current_valid")
 @dp.expect_all_or_drop(EXPECTATIONS)
 def silver_transactions_current_valid():
-    return spark.read.table("silver_transactions_current_casted")
+    return dp.read_stream("silver_transactions_current_casted")
 
 
-@dp.table(
-    name="dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current",
+dp.create_streaming_table(
+    name=SILVER_TABLE,
     comment="Silver layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "silver"},
     cluster_by=["transaction_conversion_month"],
 )
-def silver_transactions_current():
-    window = (
-        Window
-        .partitionBy(*TRANSACTION_BUSINESS_KEY)
-        .orderBy(*[F.col(c).desc() for c in DEDUP_ORDER])
-    )
 
-    return (
-        spark.read.table("silver_transactions_current_valid")
-        .withColumn("_row_number", F.row_number().over(window))
-        .filter("_row_number = 1")
-        .drop("_row_number")
-    )
+dp.create_auto_cdc_flow(
+    target=SILVER_TABLE,
+    source="silver_transactions_current_valid",
+    keys=TRANSACTION_BUSINESS_KEY,
+    sequence_by=F.struct(*DEDUP_ORDER),
+)
 
 
 @dp.table(
@@ -66,7 +60,7 @@ def silver_transactions_current():
     partition_cols=["rejected_at_month"],
 )
 def silver_transactions_current_rechaco():
-    casted = spark.read.table("silver_transactions_current_casted")
+    casted = dp.read_stream("silver_transactions_current_casted")
     payload_columns = [c for c in casted.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
 
     failed_names = F.array(
