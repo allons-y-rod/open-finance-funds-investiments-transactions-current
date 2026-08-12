@@ -9,10 +9,10 @@ from declarativa.lakeflow.silver.table_silver_tc_config import (
     SILVER_REJECTED_SCHEMA,
     SILVER_SCHEMA,
     TRANSACTION_BUSINESS_KEY,
+    BRONZE_TABLE,
+    SILVER_TABLE,
+    SILVER_REJECTED_TABLE
 )
-
-BRONZE_TABLE = "bronze_transactions_current"
-SILVER_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current"
 
 
 @dp.view(name="silver_transactions_current_casted")
@@ -55,7 +55,7 @@ dp.create_auto_cdc_flow(
 
 
 @dp.table(
-    name="dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current_rechaco",
+    name=SILVER_REJECTED_TABLE,
     comment=(
         "Quarentena - Silver layer - Fundos de Investimentos - Transactions Current - "
         "linhas que falharam expectations"

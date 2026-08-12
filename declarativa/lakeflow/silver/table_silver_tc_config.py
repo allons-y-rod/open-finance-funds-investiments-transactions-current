@@ -1,3 +1,7 @@
+BRONZE_TABLE = "dlt_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current"
+SILVER_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current"
+SILVER_REJECTED_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current_rechaco"
+
 TRANSACTION_BUSINESS_KEY = ["client_id", "transaction_id"]
 DEDUP_ORDER = ["ingestion_ts", "source_file"]
 
