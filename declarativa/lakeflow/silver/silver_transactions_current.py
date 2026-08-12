@@ -6,6 +6,8 @@ from declarativa.lakeflow.silver.table_silver_tc_config import (
     DEDUP_ORDER,
     EXPECTATIONS,
     REJECTED_PAYLOAD_EXCLUDED_COLUMNS,
+    SILVER_REJECTED_SCHEMA,
+    SILVER_SCHEMA,
     TRANSACTION_BUSINESS_KEY,
 )
 
@@ -40,6 +42,7 @@ dp.create_streaming_table(
     comment="Silver layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "silver"},
     cluster_by=["transaction_conversion_month"],
+    schema=SILVER_SCHEMA,
 )
 
 dp.create_auto_cdc_flow(
@@ -47,6 +50,7 @@ dp.create_auto_cdc_flow(
     source="silver_transactions_current_valid",
     keys=TRANSACTION_BUSINESS_KEY,
     sequence_by=F.struct(*DEDUP_ORDER),
+    stored_as_scd_type=1,
 )
 
 
@@ -58,6 +62,7 @@ dp.create_auto_cdc_flow(
     ),
     table_properties={"quality": "silver_rejected"},
     partition_cols=["rejected_at_month"],
+    schema=SILVER_REJECTED_SCHEMA,
 )
 def silver_transactions_current_rechaco():
     casted = dp.read_stream("silver_transactions_current_casted")
@@ -82,5 +87,8 @@ def silver_transactions_current_rechaco():
             F.col("_failure_reason").alias("failure_reason"),
             F.current_timestamp().alias("rejected_at"),
         )
-        .withColumn("rejected_at_month", F.date_format("rejected_at", "yyyy-MM"))
+        .withColumn(
+            "rejected_at_month",
+            F.to_date(F.date_format("rejected_at", "yyyy-MM"), "yyyy-MM"),
+        )
     )
