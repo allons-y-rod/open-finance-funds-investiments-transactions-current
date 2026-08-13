@@ -64,6 +64,6 @@ def bronze_transactions_current():
         )
         .withColumn(
             "transaction_conversion_month",
-            F.to_date(F.date_format("transaction_conversion_date", "yyyy-MM"), "yyyy-MM"),
+            F.date_format("transaction_conversion_date", "yyyy-MM"),
         )
     )

@@ -97,6 +97,24 @@ def read_silver_stream() -> DataFrame:
 
 def _upsert_valid(valid_df: DataFrame) -> None:
     merge_key_condition = " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
+
+    # Pruning: restringe o scan da SILVER_TABLE aos arquivos cujo transaction_conversion_month
+    # (chave de CLUSTER BY) aparece neste micro-batch. Usa IN sobre os meses distintos do
+    # batch (não igualdade por linha) para nunca podar um arquivo que a linha correspondente do
+    # target pudesse ocupar dentro do próprio range do batch. Continua existindo um risco residual
+    # caso uma correção de transaction_conversion_date para a mesma business key chegue em um
+    # micro-batch futuro, em outro mês — aceito conscientemente em troca do ganho de performance.
+    batch_months = [
+        row.transaction_conversion_month
+        for row in valid_df.select("transaction_conversion_month").distinct().collect()
+        if row.transaction_conversion_month is not None
+    ]
+    if batch_months:
+        months_in_clause = ", ".join(f"'{month}'" for month in batch_months)
+        merge_key_condition = (
+            f"target.transaction_conversion_month IN ({months_in_clause}) AND {merge_key_condition}"
+        )
+
     source_order = ", ".join(f"source.{c}" for c in DEDUP_ORDER)
     target_order = ", ".join(f"target.{c}" for c in DEDUP_ORDER)
     newer_condition = f"struct({source_order}) >= struct({target_order})"
@@ -114,27 +132,35 @@ def _upsert_valid(valid_df: DataFrame) -> None:
 def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
     casted_df = _cast_columns(batch_df)
     deduped_df = _deduplicate_transactions(casted_df)
-    payload_columns = [c for c in deduped_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
-    valid_df, rejected_df = _split_batch(deduped_df)
 
-    rejected_count = rejected_df.count()
-    if rejected_count > 0:
-        logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
-        (
-            rejected_df
-            .select(
-                F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
-                F.col("_failure_reason").cast("string").alias("failure_reason"),
-                F.current_timestamp().cast("timestamp").alias("rejected_at"),
-            )
-            .withColumn(
-                "rejected_at_month",
-                F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
-            )
-            .write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
-        )
+    # deduped_df alimenta 3 ações (count de rejeitados, escrita de rejeitados e o merge de
+    # válidos); sem persist() o Spark recalcularia o window/shuffle de _deduplicate_transactions
+    # a cada uma delas.
+    deduped_df.persist()
+    try:
+        payload_columns = [c for c in deduped_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
+        valid_df, rejected_df = _split_batch(deduped_df)
 
-    _upsert_valid(valid_df)
+        rejected_count = rejected_df.count()
+        if rejected_count > 0:
+            logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
+            (
+                rejected_df
+                .select(
+                    F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
+                    F.col("_failure_reason").cast("string").alias("failure_reason"),
+                    F.current_timestamp().cast("timestamp").alias("rejected_at"),
+                )
+                .withColumn(
+                    "rejected_at_month",
+                    F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
+                )
+                .write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
+            )
+
+        _upsert_valid(valid_df)
+    finally:
+        deduped_df.unpersist()
 
 
 def start_silver_stream() -> StreamingQuery:

@@ -32,7 +32,7 @@ SILVER_SCHEMA = """
     ingestion_ts                       TIMESTAMP,
     ingestion_date                     DATE,
     _rescued_data                      STRING,
-    transaction_conversion_month       DATE
+    transaction_conversion_month       STRING
 """
 
 SILVER_REJECTED_SCHEMA = """
