@@ -42,18 +42,17 @@ REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
 
 
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
-    return (
-        batch_df
-        .withColumn("transaction_conversion_date"     , F.col("transaction_conversion_date").cast("date"))
-        .withColumn("transaction_quota_price_amount"  , F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_quota_quantity"      , F.col("transaction_quota_quantity").cast(DecimalType(20, 2)))
-        .withColumn("transaction_value_amount"        , F.col("transaction_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_gross_value_amount"  , F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("income_tax_amount"               , F.col("income_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("financial_transaction_tax_amount", F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_exit_fee_amount"     , F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_net_value_amount"    , F.col("transaction_net_value_amount").cast(DecimalType(20, 2)))
-    )
+    return batch_df.withColumns({
+        "transaction_conversion_date"     : F.col("transaction_conversion_date").cast("date"),
+        "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
+        "transaction_quota_quantity"      : F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
+        "transaction_value_amount"        : F.col("transaction_value_amount").cast(DecimalType(20, 2)),
+        "transaction_gross_value_amount"  : F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)),
+        "income_tax_amount"               : F.col("income_tax_amount").cast(DecimalType(20, 2)),
+        "financial_transaction_tax_amount": F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)),
+        "transaction_exit_fee_amount"     : F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)),
+        "transaction_net_value_amount"    : F.col("transaction_net_value_amount").cast(DecimalType(20, 2)),
+    })
 
 
 def _deduplicate_transactions(df: DataFrame) -> DataFrame:
@@ -96,14 +95,11 @@ def read_silver_stream() -> DataFrame:
 
 
 def _upsert_valid(valid_df: DataFrame) -> None:
+    if valid_df.isEmpty():
+        return
+
     merge_key_condition = " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
 
-    # Pruning: restringe o scan da SILVER_TABLE aos arquivos cujo transaction_conversion_month
-    # (chave de CLUSTER BY) aparece neste micro-batch. Usa IN sobre os meses distintos do
-    # batch (não igualdade por linha) para nunca podar um arquivo que a linha correspondente do
-    # target pudesse ocupar dentro do próprio range do batch. Continua existindo um risco residual
-    # caso uma correção de transaction_conversion_date para a mesma business key chegue em um
-    # micro-batch futuro, em outro mês — aceito conscientemente em troca do ganho de performance.
     batch_months = [
         row.transaction_conversion_month
         for row in valid_df.select("transaction_conversion_month").distinct().collect()
@@ -130,19 +126,16 @@ def _upsert_valid(valid_df: DataFrame) -> None:
 
 
 def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
-    casted_df = _cast_columns(batch_df)
-    deduped_df = _deduplicate_transactions(casted_df)
+    deduped_df = _deduplicate_transactions(batch_df)
+    casted_df = _cast_columns(deduped_df)
 
-    # deduped_df alimenta 3 ações (count de rejeitados, escrita de rejeitados e o merge de
-    # válidos); sem persist() o Spark recalcularia o window/shuffle de _deduplicate_transactions
-    # a cada uma delas.
-    deduped_df.persist()
+    casted_df.persist()
     try:
-        payload_columns = [c for c in deduped_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
-        valid_df, rejected_df = _split_batch(deduped_df)
+        payload_columns = [c for c in casted_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
+        valid_df, rejected_df = _split_batch(casted_df)
 
-        rejected_count = rejected_df.count()
-        if rejected_count > 0:
+        if not rejected_df.isEmpty():
+            rejected_count = rejected_df.count()
             logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
             (
                 rejected_df
@@ -160,7 +153,7 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
 
         _upsert_valid(valid_df)
     finally:
-        deduped_df.unpersist()
+        casted_df.unpersist()
 
 
 def start_silver_stream() -> StreamingQuery:
