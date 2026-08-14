@@ -16,30 +16,18 @@ from tables_silver_config import (
     create_silver_rejected_table,
     create_silver_schema,
     create_silver_table,
+    EXPECTATIONS,
+    TRANSACTION_BUSINESS_KEY,
+    DEDUP_ORDER,
+    REJECTED_PAYLOAD_EXCLUDED_COLUMNS
+
+
 )
 
 create_silver_schema()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("silver_transactions_current")
-
-EXPECTATIONS = {
-    "valid_business_key": (
-        "transaction_id IS NOT NULL AND transaction_id != '' "
-        "AND client_id IS NOT NULL AND client_id != ''"
-    )
-}
-
-TRANSACTION_BUSINESS_KEY = ["client_id", "transaction_id"]
-DEDUP_ORDER = ["ingestion_ts", "source_file"]
-
-REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
-    "ingestion_ts",
-    "ingestion_date",
-    "_rescued_data",
-    "transaction_conversion_month",
-}
-
 
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
     return batch_df.withColumns({
@@ -154,7 +142,7 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
     _upsert_valid(valid_df)
 
 
-# Versão anterior de _write_batch (item 19/21), com persist()/unpersist() + isEmpty() de
+# Versão anterior de _write_batch, com persist()/unpersist() + isEmpty() de
 # short-circuit — funciona em cluster clássico, mas quebra em compute serverless com
 # AnalysisException [NOT_SUPPORTED_WITH_SERVERLESS] "PERSIST TABLE is not supported on serverless
 # compute" (confirmado em produção). Mantida aqui comentada pra reaproveitar se o pipeline migrar

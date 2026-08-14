@@ -4,6 +4,23 @@ from common.spark import spark
 SILVER_SCHEMA = ".".join(SILVER_TABLE.split(".")[:2])
 SILVER_CHECKPOINTS_VOLUME = ".".join(SILVER_CHECKPOINT_PATH.strip("/").split("/")[1:4])
 
+EXPECTATIONS = {
+    "valid_business_key": (
+        "transaction_id IS NOT NULL AND transaction_id != '' "
+        "AND client_id IS NOT NULL AND client_id != ''"
+    )
+}
+
+TRANSACTION_BUSINESS_KEY = ["client_id", "transaction_id"]
+DEDUP_ORDER = ["ingestion_ts", "source_file"]
+
+REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
+    "ingestion_ts",
+    "ingestion_date",
+    "_rescued_data",
+    "transaction_conversion_month",
+}
+
 
 def create_silver_schema() -> None:
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {SILVER_SCHEMA}")
