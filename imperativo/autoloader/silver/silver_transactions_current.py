@@ -43,7 +43,6 @@ REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
 
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
     return batch_df.withColumns({
-        "transaction_conversion_date"     : F.col("transaction_conversion_date").cast("date"),
         "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
         "transaction_quota_quantity"      : F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
         "transaction_value_amount"        : F.col("transaction_value_amount").cast(DecimalType(20, 2)),

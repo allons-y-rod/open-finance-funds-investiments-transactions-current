@@ -19,15 +19,18 @@ from declarativa.lakeflow.silver.table_silver_tc_config import (
 def silver_transactions_current_casted():
     return (
         dp.read_stream(BRONZE_TABLE)
-        .withColumn("transaction_conversion_date"     , F.col("transaction_conversion_date").cast("date"))
-        .withColumn("transaction_quota_price_amount"  , F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_quota_quantity"      , F.col("transaction_quota_quantity").cast(DecimalType(20, 2)))
-        .withColumn("transaction_value_amount"        , F.col("transaction_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_gross_value_amount"  , F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("income_tax_amount"               , F.col("income_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("financial_transaction_tax_amount", F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_exit_fee_amount"     , F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_net_value_amount"    , F.col("transaction_net_value_amount").cast(DecimalType(20, 2)))
+        .withColumns(
+            {
+            "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
+            "transaction_quota_quantity"      : F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
+            "transaction_value_amount"        : F.col("transaction_value_amount").cast(DecimalType(20, 2)),
+            "transaction_gross_value_amount"  : F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)),
+            "income_tax_amount"               : F.col("income_tax_amount").cast(DecimalType(20, 2)),
+            "financial_transaction_tax_amount": F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)),
+            "transaction_exit_fee_amount"     : F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)),
+            "transaction_net_value_amount"    : F.col("transaction_net_value_amount").cast(DecimalType(20, 2)),
+            }
+        )
     )
 
 
