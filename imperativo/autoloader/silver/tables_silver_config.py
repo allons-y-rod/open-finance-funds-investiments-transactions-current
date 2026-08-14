@@ -51,8 +51,7 @@ def create_silver_table() -> None:
         TBLPROPERTIES (
             'quality' = 'silver',
             'delta.autoOptimize.optimizeWrite' = 'true',
-            'delta.autoOptimize.autoCompact' = 'true',
-            'delta.enableDeletionVectors' = 'true'
+            'delta.autoOptimize.autoCompact' = 'true'
         )
     """)
 

@@ -92,7 +92,6 @@ def create_bronze_table() -> None:
         TBLPROPERTIES (
             'quality' = 'bronze',
             'delta.autoOptimize.optimizeWrite' = 'true',
-            'delta.autoOptimize.autoCompact' = 'true',
-            'delta.enableDeletionVectors' = 'true'
+            'delta.autoOptimize.autoCompact' = 'true'
         )
     """)
