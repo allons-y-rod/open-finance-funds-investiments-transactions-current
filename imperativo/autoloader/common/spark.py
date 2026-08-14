@@ -11,6 +11,8 @@ def get_spark() -> SparkSession:
         spark = (
             SparkSession.builder
             .appName("POC OpenFinance")
+            .config("spark.sql.adaptive.enabled", "true")
+            .config("spark.databricks.delta.merge.enableLowShuffle", "true")
             .getOrCreate()
         )
 

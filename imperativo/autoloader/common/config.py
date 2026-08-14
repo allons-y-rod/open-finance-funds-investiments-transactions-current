@@ -16,6 +16,7 @@ CLOUDFILES_OPTIONS = {
     "cloudFiles.schemaLocation": BRONZE_CHECKPOINT_PATH,
     "cloudFiles.allowOverwrites": "true",
     "cloudFiles.maxFilesPerTrigger": "1000",
+    "cloudFiles.maxBytesPerTrigger": "512m",
     "pathGlobFilter": "*.json",
     "multiline": "true",
 }

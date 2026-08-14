@@ -61,10 +61,10 @@ def create_bronze_table() -> None:
             client_id                          STRING,
             investiment_id                     STRING,
             transaction_id                     STRING,
-            type                                STRING,
+            type                               STRING,
             transaction_type                   STRING,
             transaction_type_additional_info   STRING,
-            transaction_conversion_date        STRING,
+            transaction_conversion_date        DATE,
             transaction_quota_price_amount     STRING,
             transaction_quota_price_currency   STRING,
             transaction_quota_quantity         STRING,
@@ -84,10 +84,14 @@ def create_bronze_table() -> None:
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
             _rescued_data                      STRING,
-            transaction_conversion_month       DATE
+            transaction_conversion_month       STRING
         )
         USING DELTA
-        CLUSTER BY (transaction_conversion_month, transaction_id)
+        CLUSTER BY (transaction_conversion_month, client_id)
         COMMENT 'Bronze layer - Fundos de Investimentos - Transactions Current'
-        TBLPROPERTIES ('quality' = 'bronze')
+        TBLPROPERTIES (
+            'quality' = 'bronze',
+            'delta.autoOptimize.optimizeWrite' = 'true',
+            'delta.autoOptimize.autoCompact' = 'true'
+        )
     """)

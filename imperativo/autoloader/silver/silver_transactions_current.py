@@ -42,18 +42,16 @@ REJECTED_PAYLOAD_EXCLUDED_COLUMNS = {
 
 
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
-    return (
-        batch_df
-        .withColumn("transaction_conversion_date"     , F.col("transaction_conversion_date").cast("date"))
-        .withColumn("transaction_quota_price_amount"  , F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_quota_quantity"      , F.col("transaction_quota_quantity").cast(DecimalType(20, 2)))
-        .withColumn("transaction_value_amount"        , F.col("transaction_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_gross_value_amount"  , F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)))
-        .withColumn("income_tax_amount"               , F.col("income_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("financial_transaction_tax_amount", F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_exit_fee_amount"     , F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)))
-        .withColumn("transaction_net_value_amount"    , F.col("transaction_net_value_amount").cast(DecimalType(20, 2)))
-    )
+    return batch_df.withColumns({
+        "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
+        "transaction_quota_quantity"      : F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
+        "transaction_value_amount"        : F.col("transaction_value_amount").cast(DecimalType(20, 2)),
+        "transaction_gross_value_amount"  : F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)),
+        "income_tax_amount"               : F.col("income_tax_amount").cast(DecimalType(20, 2)),
+        "financial_transaction_tax_amount": F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)),
+        "transaction_exit_fee_amount"     : F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)),
+        "transaction_net_value_amount"    : F.col("transaction_net_value_amount").cast(DecimalType(20, 2)),
+    })
 
 
 def _deduplicate_transactions(df: DataFrame) -> DataFrame:
@@ -96,7 +94,25 @@ def read_silver_stream() -> DataFrame:
 
 
 def _upsert_valid(valid_df: DataFrame) -> None:
-    merge_key_condition = " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
+    # valid_df.isEmpty() só compensa como short-circuit quando o DataFrame está persistido (ver
+    # _write_batch) — sem persist(), forçaria uma recomputação extra do dedup/cast só pra checar
+    # vazio. Comentado por causa do NOT_SUPPORTED_WITH_SERVERLESS documentado em _write_batch;
+    # reativar junto com o persist() se migrar para um cluster que suporte.
+    # if valid_df.isEmpty():
+    #     return
+
+    merge_condition = F.expr(
+        " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
+    )
+
+    batch_months = [
+        row.transaction_conversion_month
+        for row in valid_df.select("transaction_conversion_month").distinct().collect()
+        if row.transaction_conversion_month is not None
+    ]
+    if batch_months:
+        merge_condition = F.col("target.transaction_conversion_month").isin(batch_months) & merge_condition
+
     source_order = ", ".join(f"source.{c}" for c in DEDUP_ORDER)
     target_order = ", ".join(f"target.{c}" for c in DEDUP_ORDER)
     newer_condition = f"struct({source_order}) >= struct({target_order})"
@@ -104,7 +120,7 @@ def _upsert_valid(valid_df: DataFrame) -> None:
     target_table = DeltaTable.forName(spark, SILVER_TABLE)
     (
         target_table.alias("target")
-        .merge(valid_df.alias("source"), merge_key_condition)
+        .merge(valid_df.alias("source"), merge_condition)
         .whenMatchedUpdateAll(condition=newer_condition)
         .whenNotMatchedInsertAll()
         .execute()
@@ -112,10 +128,11 @@ def _upsert_valid(valid_df: DataFrame) -> None:
 
 
 def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
-    casted_df = _cast_columns(batch_df)
-    deduped_df = _deduplicate_transactions(casted_df)
-    payload_columns = [c for c in deduped_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
-    valid_df, rejected_df = _split_batch(deduped_df)
+    deduped_df = _deduplicate_transactions(batch_df)
+    casted_df = _cast_columns(deduped_df)
+
+    payload_columns = [c for c in casted_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
+    valid_df, rejected_df = _split_batch(casted_df)
 
     rejected_count = rejected_df.count()
     if rejected_count > 0:
@@ -135,6 +152,43 @@ def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
         )
 
     _upsert_valid(valid_df)
+
+
+# Versão anterior de _write_batch (item 19/21), com persist()/unpersist() + isEmpty() de
+# short-circuit — funciona em cluster clássico, mas quebra em compute serverless com
+# AnalysisException [NOT_SUPPORTED_WITH_SERVERLESS] "PERSIST TABLE is not supported on serverless
+# compute" (confirmado em produção). Mantida aqui comentada pra reaproveitar se o pipeline migrar
+# pra um cluster que suporte persist():
+#
+# def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
+#     deduped_df = _deduplicate_transactions(batch_df)
+#     casted_df = _cast_columns(deduped_df)
+#
+#     casted_df.persist()
+#     try:
+#         payload_columns = [c for c in casted_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
+#         valid_df, rejected_df = _split_batch(casted_df)
+#
+#         if not rejected_df.isEmpty():
+#             rejected_count = rejected_df.count()
+#             logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
+#             (
+#                 rejected_df
+#                 .select(
+#                     F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
+#                     F.col("_failure_reason").cast("string").alias("failure_reason"),
+#                     F.current_timestamp().cast("timestamp").alias("rejected_at"),
+#                 )
+#                 .withColumn(
+#                     "rejected_at_month",
+#                     F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
+#                 )
+#                 .write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
+#             )
+#
+#         _upsert_valid(valid_df)
+#     finally:
+#         casted_df.unpersist()
 
 
 def start_silver_stream() -> StreamingQuery:

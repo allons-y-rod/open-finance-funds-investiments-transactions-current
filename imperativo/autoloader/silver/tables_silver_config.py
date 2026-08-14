@@ -42,13 +42,17 @@ def create_silver_table() -> None:
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
             _rescued_data                      STRING,
-            transaction_conversion_month       DATE,
+            transaction_conversion_month       STRING,
             CONSTRAINT pk_silver_transactions_current PRIMARY KEY (client_id, transaction_id)
         )
         USING DELTA
         CLUSTER BY (transaction_conversion_month)
         COMMENT 'Silver layer - Fundos de Investimentos - Transactions Current'
-        TBLPROPERTIES ('quality' = 'silver')
+        TBLPROPERTIES (
+            'quality' = 'silver',
+            'delta.autoOptimize.optimizeWrite' = 'true',
+            'delta.autoOptimize.autoCompact' = 'true'
+        )
     """)
 
 
@@ -63,5 +67,9 @@ def create_silver_rejected_table() -> None:
         USING DELTA
         PARTITIONED BY (rejected_at_month)
         COMMENT 'Quarentena - Silver layer - Fundos de Investimentos - Transactions Current - linhas que falharam expectations'
-        TBLPROPERTIES ('quality' = 'silver_rejected')
+        TBLPROPERTIES (
+            'quality' = 'silver_rejected',
+            'delta.autoOptimize.optimizeWrite' = 'true',
+            'delta.autoOptimize.autoCompact' = 'true'
+        )
     """)

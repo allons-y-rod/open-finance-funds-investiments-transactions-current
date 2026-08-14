@@ -24,9 +24,11 @@ def read_bronze_stream() -> DataFrame:
         cloudfiles_reader(spark.readStream)
         .schema(SCHEMA)
         .load(INPUT_PATH)
-        .withColumn("source_file", F.col("_metadata.file_path"))
-        .withColumn("ingestion_ts", F.current_timestamp())
-        .withColumn("ingestion_date", F.to_date("ingestion_ts"))
+        .withColumns({
+        "source_file": F.col("_metadata.file_path"),
+        "ingestion_ts": F.current_timestamp(),
+        "ingestion_date": F.to_date("ingestion_ts")
+        })
     )
 
     exploded = raw.select(
@@ -44,7 +46,7 @@ def read_bronze_stream() -> DataFrame:
         F.col("transaction.type").alias("type"),
         F.col("transaction.transactionType").alias("transaction_type"),
         F.col("transaction.transactionTypeAdditionalInfo").alias("transaction_type_additional_info"),
-        F.col("transaction.transactionConversionDate").alias("transaction_conversion_date"),
+        F.col("transaction.transactionConversionDate").cast("date").alias("transaction_conversion_date"),
         F.col("transaction.transactionQuotaPrice.amount").alias("transaction_quota_price_amount"),
         F.col("transaction.transactionQuotaPrice.currency").alias("transaction_quota_price_currency"),
         F.col("transaction.transactionQuotaQuantity").alias("transaction_quota_quantity"),
@@ -64,8 +66,8 @@ def read_bronze_stream() -> DataFrame:
         "ingestion_ts",
         "ingestion_date",
         "_rescued_data",
-        F.to_date(
-            F.date_format(F.col("transaction.transactionConversionDate"), "yyyy-MM"), "yyyy-MM"
+        F.date_format(
+            F.col("transaction.transactionConversionDate").cast("date"), "yyyy-MM"
         ).alias("transaction_conversion_month"),
     )
 
