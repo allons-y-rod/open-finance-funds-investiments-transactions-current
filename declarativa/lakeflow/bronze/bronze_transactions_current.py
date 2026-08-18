@@ -2,7 +2,7 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
 from declarativa.lakeflow.common.config import INPUT_PATH, cloudfiles_reader
-from declarativa.lakeflow.bronze.table_bronze_tc_config import transactions_current_schema
+from declarativa.lakeflow.bronze.table_bronze_tc_config import BRONZE_SCHEMA, transactions_current_schema
 
 SCHEMA = transactions_current_schema()
 
@@ -12,6 +12,7 @@ SCHEMA = transactions_current_schema()
     comment="Bronze layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "bronze"},
     cluster_by=["transaction_conversion_month", "transaction_id"],
+    schema=BRONZE_SCHEMA,
 
 )
 def bronze_transactions_current():
