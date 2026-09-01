@@ -46,7 +46,7 @@ dp.create_streaming_table(
     name=SILVER_TABLE,
     comment="Silver layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "silver"},
-    cluster_by=["transaction_conversion_month"],
+    cluster_by=["client_id","transaction_conversion_month"],
     schema=SILVER_SCHEMA,
 )
 
