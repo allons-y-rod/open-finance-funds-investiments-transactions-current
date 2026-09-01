@@ -18,8 +18,19 @@ declarativa/
     │   └── table_bronze_tc_config.py        # transactions_current_schema (payload StructType)
     └── silver/
         ├── silver_transactions_current.py   # @dp.view/@dp.table + create_auto_cdc_flow (upsert)
-        └── table_silver_tc_config.py        # schemas das tabelas, EXPECTATIONS, business key, dedup order
+        ├── table_silver_tc_config.py        # schemas das tabelas, EXPECTATIONS, business key, dedup order
+        ├── silver_transactions_current_quarantine.py    # ALTERNATIVA: split via tabela _quarantine + flag is_quarantined
+        └── table_silver_tc_quarantine_config.py         # config da alternativa acima (+ QUARANTINE_RULE)
 ```
+
+> Os arquivos `*_quarantine*` são uma **implementação alternativa** da silver, no padrão *quarantine
+> table* da doc do Databricks (tabela intermediária com coluna booleana `is_quarantined` + views de
+> split). `silver_transactions_current` (lado válido, via CDC) sai idêntica; já
+> `silver_transactions_current_rechaco` mantém o nome mas passa a ter o **schema largo** (as mesmas
+> colunas de negócio de `_casted`, mesma lógica de `_valid`) em vez de `data`(JSON)/`failure_reason`/
+> `rejected_at`/`rejected_at_month`. Só um dos dois pares (`silver_transactions_current.py` **ou**
+> `silver_transactions_current_quarantine.py`) deve estar ativo na pipeline por vez. O restante
+> deste README descreve a versão padrão (`silver_transactions_current.py`).
 
 ## Camadas
 
@@ -34,9 +45,11 @@ vier malformada. Nenhuma validação/rejeição acontece nesta camada — tudo q
 
 ### Silver
 
-- **`silver_transactions_current_casted`** (`@dp.view`): lê a bronze via `dp.read_stream`, tipa
-  os campos monetários/quantidade para `DECIMAL(20, 2)` (`transaction_conversion_date` já chega
-  como `DATE` da bronze, sem recast).
+- **`silver_transactions_current_casted`** (`@dp.view`): lê a bronze via
+  `spark.readStream.option("skipChangeCommits", "true").table(...)` (streaming; `skipChangeCommits`
+  para não quebrar em commits não-append da bronze — Full Refresh, `OPTIMIZE`), tipa os campos
+  monetários/quantidade para `DECIMAL(20, 2)` (`transaction_conversion_date` já chega como `DATE`
+  da bronze, sem recast).
 - **`silver_transactions_current_valid`** (`@dp.view` + `@dp.expect_all_or_drop(EXPECTATIONS)`):
   aplica `valid_business_key` (`transaction_id`/`client_id` não nulos e não vazios), descartando
   linhas inválidas do fluxo que alimenta a tabela final.

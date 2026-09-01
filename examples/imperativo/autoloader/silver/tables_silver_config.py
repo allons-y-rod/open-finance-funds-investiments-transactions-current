@@ -63,7 +63,7 @@ def create_silver_table() -> None:
             CONSTRAINT pk_silver_transactions_current PRIMARY KEY (client_id, transaction_id)
         )
         USING DELTA
-        CLUSTER BY (transaction_conversion_month)
+        CLUSTER BY (transaction_conversion_month, client_id)
         COMMENT 'Silver layer - Fundos de Investimentos - Transactions Current'
         TBLPROPERTIES (
             'quality' = 'silver',
@@ -74,7 +74,7 @@ def create_silver_table() -> None:
 
 
 def create_silver_rejected_table() -> None:
-    spark.sql(f"""
+    spark.sql(f"""client_id
         CREATE TABLE IF NOT EXISTS {SILVER_REJECTED_TABLE} (
             data                STRING,
             failure_reason      STRING,

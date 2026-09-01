@@ -21,9 +21,13 @@ camada (bronze/silver).
 ├── declarativa/            # implementação declarativa (Lakeflow Declarative Pipelines)
 ├── imperativo/             # implementação imperativa (Auto Loader + Structured Streaming)
 └── examples/                # payloads JSON de exemplo do recurso Open Finance
-    ├── payload.json                 # payload válido
-    ├── payload_error.json           # payload válido estruturalmente, com chave de negócio vazia (clientId "")
-    └── payload_mal_formatado.json   # JSON malformado (sintaxe inválida)
+    ├── payload.json                         # payload válido
+    ├── payload_error.json                   # payload válido estruturalmente, com chave de negócio vazia (clientId "")
+    ├── payload_mal_formatado.json           # JSON malformado (sintaxe inválida)
+    ├── payload_multiplos_registros.json     # múltiplas transações no mesmo array `data` (ENTRADA/SAIDA, clientes distintos)
+    ├── payload_vazio.json                   # array `data` vazio
+    ├── payload_transaction_id_vazio.json    # payload válido estruturalmente, com chave de negócio vazia (transactionId "")
+    └── payload_campo_desconhecido.json      # payload válido com campo extra não mapeado no schema (`settlementDate`)
 ```
 
 ## Payload de origem
