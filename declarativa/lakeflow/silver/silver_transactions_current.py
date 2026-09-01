@@ -18,7 +18,9 @@ from declarativa.lakeflow.silver.table_silver_tc_config import (
 @dp.view(name="silver_transactions_current_casted")
 def silver_transactions_current_casted():
     return (
-        dp.read_stream(BRONZE_TABLE)
+        spark.readStream
+            .option("skipChangeCommits", "true")
+            .table(BRONZE_TABLE)
         .withColumns(
             {
             "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),

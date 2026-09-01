@@ -93,13 +93,20 @@ def _upsert_valid(valid_df: DataFrame) -> None:
         " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
     )
 
-    batch_months = [
-        row.transaction_conversion_month
-        for row in valid_df.select("transaction_conversion_month").distinct().collect()
-        if row.transaction_conversion_month is not None
+    # Pruning por client_id (imutável dentro da business key), não por
+    # transaction_conversion_month (mutável: a origem pode reemitir a mesma business key com uma
+    # transactionConversionDate corrigida, mudando o mês). Filtrar o target por mês podia deixar a
+    # linha antiga fora do escopo do MERGE quando o mês mudava -> INSERT em vez de UPDATE ->
+    # business key duplicada. client_id nunca muda para uma dada (client_id, transaction_id), então
+    # a linha antiga está sempre no escopo; e como a SILVER_TABLE é clusterizada por
+    # (transaction_conversion_month, client_id), o predicado IN ainda faz file skipping.
+    batch_client_ids = [
+        row.client_id
+        for row in valid_df.select("client_id").distinct().collect()
+        if row.client_id is not None
     ]
-    if batch_months:
-        merge_condition = F.col("target.transaction_conversion_month").isin(batch_months) & merge_condition
+    if batch_client_ids:
+        merge_condition = F.col("target.client_id").isin(batch_client_ids) & merge_condition
 
     source_order = ", ".join(f"source.{c}" for c in DEDUP_ORDER)
     target_order = ", ".join(f"target.{c}" for c in DEDUP_ORDER)

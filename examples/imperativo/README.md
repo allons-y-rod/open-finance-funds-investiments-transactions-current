@@ -49,5 +49,7 @@ fonte incremental, não Auto Loader). Por micro-batch (`foreachBatch`):
    `client_id` não nulos e não vazios), separando `valid_df`/`rejected_df`.
 4. **Escrita**: `rejected_df` é serializado em JSON e gravado em `append` na tabela de rejeitados;
    `valid_df` é gravado via `MERGE` (`_upsert_valid`, `DeltaTable`) — upsert por business key, com
-   poda por `transaction_conversion_month` e `whenMatchedUpdateAll` condicionado ao registro mais
-   recente — garantindo zero duplicatas na tabela final entre micro-batches e reinícios do stream.
+   poda por `client_id` (coluna imutável da business key; `CLUSTER BY (transaction_conversion_month,
+   client_id)`) e `whenMatchedUpdateAll` condicionado ao registro mais recente — garantindo zero
+   duplicatas na tabela final entre micro-batches e reinícios do stream, inclusive quando a origem
+   corrige a data de conversão de uma business key já gravada.
