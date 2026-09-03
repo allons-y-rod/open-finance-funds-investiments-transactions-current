@@ -2,6 +2,10 @@ from pyspark.sql.streaming import DataStreamReader
 
 INPUT_PATH = "/Volumes/dlt_open_finance_funds_investiments_transactions_current/bronze/landing"
 
+BRONZE_TABLE = "dlt_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current"
+SILVER_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current"
+SILVER_REJECTED_TABLE = "dlt_open_finance_funds_investiments_transactions_current.silver.silver_transactions_current_rechaco"
+
 CLOUDFILES_OPTIONS = {
     "cloudFiles.format": "json",
     "cloudFiles.includeExistingFiles": "true",
