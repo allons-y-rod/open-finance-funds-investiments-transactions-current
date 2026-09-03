@@ -1,5 +1,5 @@
-from common.config import SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
-from common.spark import spark
+from imperativo.autoloader.common.config import SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
+from imperativo.autoloader.common.spark import spark
 
 SILVER_SCHEMA = ".".join(SILVER_TABLE.split(".")[:2])
 SILVER_CHECKPOINTS_VOLUME = ".".join(SILVER_CHECKPOINT_PATH.strip("/").split("/")[1:4])

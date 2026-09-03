@@ -5,9 +5,9 @@ from pyspark.sql.streaming import StreamingQuery
 import sys
 sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
 
-from common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE, INPUT_PATH, cloudfiles_reader
-from common.spark import spark
-from tables_bronze_config import (
+from imperativo.autoloader.common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE, INPUT_PATH, cloudfiles_reader
+from imperativo.autoloader.common.spark import spark
+from imperativo.autoloader.bronze.tables_bronze_config import (
     create_bronze_checkpoints_volume,
     create_bronze_schema,
     create_bronze_table,

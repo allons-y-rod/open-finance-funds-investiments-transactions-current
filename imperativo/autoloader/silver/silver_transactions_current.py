@@ -9,9 +9,9 @@ from pyspark.sql.types import DecimalType
 import sys
 sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
 
-from common.config import BRONZE_TABLE, SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
-from common.spark import spark
-from tables_silver_config import (
+from imperativo.autoloader.common.config import BRONZE_TABLE, SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
+from imperativo.autoloader.common.spark import spark
+from imperativo.autoloader.silver.tables_silver_config import (
     create_silver_checkpoints_volume,
     create_silver_rejected_table,
     create_silver_schema,

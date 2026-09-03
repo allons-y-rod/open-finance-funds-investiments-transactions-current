@@ -1,18 +1,16 @@
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
-from declarativa.lakeflow.common.config import INPUT_PATH, cloudfiles_reader
-from declarativa.lakeflow.bronze.table_bronze_tc_config import BRONZE_SCHEMA, transactions_current_schema
+from declarativa.lakeflow.common.config import BRONZE_TABLE, INPUT_PATH, cloudfiles_reader
+from declarativa.lakeflow.bronze.table_bronze_tc_config import transactions_current_schema
 
 SCHEMA = transactions_current_schema()
 
-
 @dp.table(
-    name="dlt_open_finance_funds_investiments_transactions_current.bronze.bronze_transactions_current",
+    name=BRONZE_TABLE,
     comment="Bronze layer - Fundos de Investimentos - Transactions Current",
     table_properties={"quality": "bronze"},
     cluster_by=["transaction_conversion_month", "transaction_id"],
-    schema=BRONZE_SCHEMA,
 
 )
 def bronze_transactions_current():
@@ -22,9 +20,9 @@ def bronze_transactions_current():
         .schema(SCHEMA)
         .load(INPUT_PATH)
         .withColumns({
-        "source_file": F.col("_metadata.file_path"),
-        "ingestion_ts": F.current_timestamp(),
-        "ingestion_date": F.to_date("ingestion_ts")
+            "source_file": F.col("_metadata.file_path"),
+            "ingestion_ts": F.current_timestamp(),
+            "ingestion_date": F.to_date("ingestion_ts")
         })
     )
 

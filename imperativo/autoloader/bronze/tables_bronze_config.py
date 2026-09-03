@@ -1,5 +1,5 @@
-from common.config import BRONZE_REJECTED_TABLE, BRONZE_TABLE
-from common.spark import spark
+from imperativo.autoloader.common.config import BRONZE_CHECKPOINT_PATH, BRONZE_TABLE
+from imperativo.autoloader.common.spark import spark
 
 from pyspark.sql.types import (
     ArrayType,
@@ -9,10 +9,16 @@ from pyspark.sql.types import (
 )
 
 BRONZE_SCHEMA = ".".join(BRONZE_TABLE.split(".")[:2])
+BRONZE_CHECKPOINTS_VOLUME = ".".join(BRONZE_CHECKPOINT_PATH.strip("/").split("/")[1:4])
 
 
 def create_bronze_schema() -> None:
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {BRONZE_SCHEMA}")
+
+
+def create_bronze_checkpoints_volume() -> None:
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {BRONZE_CHECKPOINTS_VOLUME}")
+
 
 
 def transactions_current_schema():
@@ -55,7 +61,7 @@ def create_bronze_table() -> None:
             client_id                          STRING,
             investiment_id                     STRING,
             transaction_id                     STRING,
-            type                                STRING,
+            type                               STRING,
             transaction_type                   STRING,
             transaction_type_additional_info   STRING,
             transaction_conversion_date        DATE,
@@ -77,25 +83,15 @@ def create_bronze_table() -> None:
             source_file                        STRING,
             ingestion_ts                       TIMESTAMP,
             ingestion_date                     DATE,
-            _rescued_data                      STRING
+            _rescued_data                      STRING,
+            transaction_conversion_month       STRING
         )
         USING DELTA
-        CLUSTER BY (ingestion_date)
+        CLUSTER BY (transaction_conversion_month, client_id)
         COMMENT 'Bronze layer - Fundos de Investimentos - Transactions Current'
-        TBLPROPERTIES ('quality' = 'bronze')
-    """)
-
-
-def create_bronze_rejected_table() -> None:
-    spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {BRONZE_REJECTED_TABLE} (
-            data                STRING,
-            failure_reason      STRING,
-            rejected_at         TIMESTAMP,
-            rejected_at_month   STRING
+        TBLPROPERTIES (
+            'quality' = 'bronze',
+            'delta.autoOptimize.optimizeWrite' = 'true',
+            'delta.autoOptimize.autoCompact' = 'true'
         )
-        USING DELTA
-        PARTITIONED BY (rejected_at_month)
-        COMMENT 'Quarentena - Bronze layer (batch) - Fundos de Investimentos - Transactions Current - JSON invalido ou campo do schema ausente'
-        TBLPROPERTIES ('quality' = 'bronze_rejected')
     """)
