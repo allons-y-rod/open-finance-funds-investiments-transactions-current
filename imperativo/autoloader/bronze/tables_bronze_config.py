@@ -42,16 +42,24 @@ def transactions_current_schema():
         StructField("incomeTax", monetary_type, True),
         StructField("financialTransactionTax", monetary_type, True),
         StructField("transactionExitFee", monetary_type, True),
-        StructField("transactionNetValue", monetary_type, True)
+        StructField("transactionNetValue", monetary_type, True),
     ])
 
     meta_schema = StructType([
         StructField("requestDateTime", StringType(), True)
     ])
 
+    links_schema = StructType([
+        StructField("self", StringType(), True),
+        StructField("first", StringType(), True),
+        StructField("prev", StringType(), True),
+        StructField("next", StringType(), True),
+    ])
+
     return StructType([
         StructField("data", ArrayType(transaction_schema), True),
-        StructField("meta", meta_schema, True)
+        StructField("meta", meta_schema, True),
+        StructField("links", links_schema, True),
     ])
 
 

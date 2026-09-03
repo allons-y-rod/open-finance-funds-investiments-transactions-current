@@ -10,18 +10,15 @@ import sys
 sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
 
 from imperativo.autoloader.common.config import BRONZE_TABLE, SILVER_CHECKPOINT_PATH, SILVER_REJECTED_TABLE, SILVER_TABLE
+from imperativo.autoloader.common.rules_module import get_rules
 from imperativo.autoloader.common.spark import spark
 from imperativo.autoloader.silver.tables_silver_config import (
     create_silver_checkpoints_volume,
     create_silver_rejected_table,
     create_silver_schema,
     create_silver_table,
-    EXPECTATIONS,
-    TRANSACTION_BUSINESS_KEY,
     DEDUP_ORDER,
-    REJECTED_PAYLOAD_EXCLUDED_COLUMNS
-
-
+    TRANSACTION_BUSINESS_KEY,
 )
 
 create_silver_schema()
@@ -29,17 +26,41 @@ create_silver_schema()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("silver_transactions_current")
 
+RULES = get_rules("validity")
+QUARANTINE_RULE = "NOT({0})".format(" AND ".join(RULES.values()))
+
+MONETARY_COLUMNS = (
+    "transaction_quota_price_amount",
+    "transaction_quota_quantity",
+    "transaction_value_amount",
+    "transaction_gross_value_amount",
+    "income_tax_amount",
+    "financial_transaction_tax_amount",
+    "transaction_exit_fee_amount",
+    "transaction_net_value_amount",
+)
+
+
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
+    return batch_df.withColumns(
+        {c: F.col(c).cast(DecimalType(20, 2)) for c in MONETARY_COLUMNS}
+    )
+
+
+def _flag_quarantine(batch_df: DataFrame) -> DataFrame:
+    failed_rule_names = F.array(
+        *[F.when(~F.expr(condition), F.lit(name)) for name, condition in RULES.items()]
+    )
     return batch_df.withColumns({
-        "transaction_quota_price_amount"  : F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
-        "transaction_quota_quantity"      : F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
-        "transaction_value_amount"        : F.col("transaction_value_amount").cast(DecimalType(20, 2)),
-        "transaction_gross_value_amount"  : F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)),
-        "income_tax_amount"               : F.col("income_tax_amount").cast(DecimalType(20, 2)),
-        "financial_transaction_tax_amount": F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)),
-        "transaction_exit_fee_amount"     : F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)),
-        "transaction_net_value_amount"    : F.col("transaction_net_value_amount").cast(DecimalType(20, 2)),
+        "is_quarantined": F.expr(QUARANTINE_RULE),
+        "failure_reason": F.concat_ws(", ", F.filter(failed_rule_names, lambda x: x.isNotNull())),
     })
+
+
+def _split_batch(batch_df: DataFrame) -> tuple[DataFrame, DataFrame]:
+    valid_df = batch_df.filter("is_quarantined = false").drop("is_quarantined", "failure_reason")
+    invalid_df = batch_df.filter("is_quarantined = true").drop("is_quarantined")
+    return valid_df, invalid_df
 
 
 def _deduplicate_transactions(df: DataFrame) -> DataFrame:
@@ -59,47 +80,21 @@ def _deduplicate_transactions(df: DataFrame) -> DataFrame:
     )
 
 
-def _split_batch(batch_df: DataFrame) -> tuple[DataFrame, DataFrame]:
-    failed_names = F.array(
-        *[
-            F.when(~F.expr(condition), F.lit(name))
-            for name, condition in EXPECTATIONS.items()
-        ]
-    )
-    enriched = batch_df.withColumn(
-        "_failure_reason",
-        F.concat_ws(", ", F.filter(failed_names, lambda x: x.isNotNull())),
-    )
-
-    valid_df = enriched.where(F.col("_failure_reason") == "").drop("_failure_reason")
-    rejected_df = enriched.where(F.col("_failure_reason") != "")
-
-    return valid_df, rejected_df
-
-
 def read_silver_stream() -> DataFrame:
-    return spark.readStream.table(BRONZE_TABLE)
+    return (
+        spark.readStream
+        .option("skipChangeCommits", "true")
+        .table(BRONZE_TABLE)
+    )
 
 
 def _upsert_valid(valid_df: DataFrame) -> None:
-    # valid_df.isEmpty() só compensa como short-circuit quando o DataFrame está persistido (ver
-    # _write_batch) — sem persist(), forçaria uma recomputação extra do dedup/cast só pra checar
-    # vazio. Comentado por causa do NOT_SUPPORTED_WITH_SERVERLESS documentado em _write_batch;
-    # reativar junto com o persist() se migrar para um cluster que suporte.
-    # if valid_df.isEmpty():
-    #     return
 
     merge_condition = F.expr(
         " AND ".join(f"target.{c} = source.{c}" for c in TRANSACTION_BUSINESS_KEY)
     )
 
-    # Pruning por client_id (imutável dentro da business key), não por
-    # transaction_conversion_month (mutável: a origem pode reemitir a mesma business key com uma
-    # transactionConversionDate corrigida, mudando o mês). Filtrar o target por mês podia deixar a
-    # linha antiga fora do escopo do MERGE quando o mês mudava -> INSERT em vez de UPDATE ->
-    # business key duplicada. client_id nunca muda para uma dada (client_id, transaction_id), então
-    # a linha antiga está sempre no escopo; e como a SILVER_TABLE é clusterizada por
-    # (transaction_conversion_month, client_id), o predicado IN ainda faz file skipping.
+   
     batch_client_ids = [
         row.client_id
         for row in valid_df.select("client_id").distinct().collect()
@@ -123,68 +118,17 @@ def _upsert_valid(valid_df: DataFrame) -> None:
 
 
 def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
-    deduped_df = _deduplicate_transactions(batch_df)
-    casted_df = _cast_columns(deduped_df)
+    
+    casted_df = _cast_columns(batch_df)
+    flagged_df = _flag_quarantine(casted_df)
+    valid_df, invalid_df = _split_batch(flagged_df)
 
-    payload_columns = [c for c in casted_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
-    valid_df, rejected_df = _split_batch(casted_df)
+    invalid_count = invalid_df.count()
+    if invalid_count > 0:
+        logger.warning(f"[batch {batch_id}] {invalid_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
+        invalid_df.write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
 
-    rejected_count = rejected_df.count()
-    if rejected_count > 0:
-        logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
-        (
-            rejected_df
-            .select(
-                F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
-                F.col("_failure_reason").cast("string").alias("failure_reason"),
-                F.current_timestamp().cast("timestamp").alias("rejected_at"),
-            )
-            .withColumn(
-                "rejected_at_month",
-                F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
-            )
-            .write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
-        )
-
-    _upsert_valid(valid_df)
-
-
-# Versão anterior de _write_batch, com persist()/unpersist() + isEmpty() de
-# short-circuit — funciona em cluster clássico, mas quebra em compute serverless com
-# AnalysisException [NOT_SUPPORTED_WITH_SERVERLESS] "PERSIST TABLE is not supported on serverless
-# compute" (confirmado em produção). Mantida aqui comentada pra reaproveitar se o pipeline migrar
-# pra um cluster que suporte persist():
-#
-# def _write_batch(batch_df: DataFrame, batch_id: int) -> None:
-#     deduped_df = _deduplicate_transactions(batch_df)
-#     casted_df = _cast_columns(deduped_df)
-#
-#     casted_df.persist()
-#     try:
-#         payload_columns = [c for c in casted_df.columns if c not in REJECTED_PAYLOAD_EXCLUDED_COLUMNS]
-#         valid_df, rejected_df = _split_batch(casted_df)
-#
-#         if not rejected_df.isEmpty():
-#             rejected_count = rejected_df.count()
-#             logger.warning(f"[batch {batch_id}] {rejected_count} rows failed expectations, sending to {SILVER_REJECTED_TABLE}")
-#             (
-#                 rejected_df
-#                 .select(
-#                     F.to_json(F.struct(*payload_columns)).cast("string").alias("data"),
-#                     F.col("_failure_reason").cast("string").alias("failure_reason"),
-#                     F.current_timestamp().cast("timestamp").alias("rejected_at"),
-#                 )
-#                 .withColumn(
-#                     "rejected_at_month",
-#                     F.date_format(F.col("rejected_at"), "yyyy-MM").cast("string"),
-#                 )
-#                 .write.format("delta").mode("append").saveAsTable(SILVER_REJECTED_TABLE)
-#             )
-#
-#         _upsert_valid(valid_df)
-#     finally:
-#         casted_df.unpersist()
-
+    _upsert_valid(_deduplicate_transactions(valid_df))
 
 def start_silver_stream() -> StreamingQuery:
     create_silver_checkpoints_volume()
