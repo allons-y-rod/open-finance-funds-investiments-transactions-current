@@ -52,7 +52,7 @@ def silver_transactions_current_casted():
     partition_cols=["is_quarantined"],
 )
 @dp.expect_all(rules)
-def silver_transactions_current():
+def silver_transactions_current_temporary():
     failed_rule_names = F.array(
         *[F.when(~F.expr(condition), F.lit(name)) for name, condition in rules.items()]
     )
@@ -69,7 +69,7 @@ def silver_transactions_current():
 def silver_transactions_current_valid():
     return (
         spark.readStream
-        .table("silver_transactions_current")
+        .table("silver_transactions_current_temporary")
         .filter("is_quarantined = false")
         .drop("is_quarantined", "failure_reason")
     )
@@ -79,7 +79,7 @@ def silver_transactions_current_valid():
 def silver_transactions_current_invalid():
     return (
         spark.readStream
-        .table("silver_transactions_current")
+        .table("silver_transactions_current_temporary")
         .filter("is_quarantined = true")
         .drop("is_quarantined")
     )

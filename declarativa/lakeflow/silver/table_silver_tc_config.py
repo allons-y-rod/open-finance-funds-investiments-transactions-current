@@ -32,6 +32,7 @@ SILVER_SCHEMA = """
 """
 
 SILVER_SCHEMA_REJECTED = """
+    failure_reason                     STRING,
     client_id                          STRING,
     investiment_id                     STRING,
     transaction_id                     STRING,
