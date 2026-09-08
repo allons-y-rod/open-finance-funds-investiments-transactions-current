@@ -26,8 +26,14 @@ camada (bronze/silver).
     ├── payload_mal_formatado.json           # JSON malformado (sintaxe inválida)
     ├── payload_multiplos_registros.json     # múltiplas transações no mesmo array `data` (ENTRADA/SAIDA, clientes distintos)
     ├── payload_vazio.json                   # array `data` vazio
-    ├── payload_transaction_id_vazio.json    # payload válido estruturalmente, com chave de negócio vazia (transactionId "")
-    └── payload_campo_desconhecido.json      # payload válido com campo extra não mapeado no schema (`settlementDate`)
+    ├── payload_transaction_id_vazio.json     # payload válido estruturalmente, com chave de negócio vazia (transactionId "")
+    ├── payload_campo_desconhecido.json       # payload válido com campo extra não mapeado no schema (`settlementDate`)
+    ├── payload_client_id_null.json           # chave de negócio nula em JSON (clientId: null, não string vazia)
+    ├── payload_transaction_id_null.json      # chave de negócio nula em JSON (transactionId: null, não string vazia)
+    ├── payload_data_ausente.json             # chave `data` ausente no documento inteiro (só `links`/`meta`) — explode_outer gera uma linha toda nula
+    ├── payload_data_conversao_invalida.json  # transactionConversionDate com string não parseável como data
+    ├── payload_valor_monetario_invalido.json # transactionValue.amount com string não numérica
+    └── payload_chave_duplicada.json          # mesma business key de payload.json (client_id/transaction_id), data/valores diferentes
 ```
 
 ## Payload de origem
