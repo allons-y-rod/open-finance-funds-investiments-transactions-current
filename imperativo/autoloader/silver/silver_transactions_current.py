@@ -4,7 +4,6 @@ from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
 from pyspark.sql.streaming import StreamingQuery
-from pyspark.sql.types import DecimalType
 
 import sys
 sys.path.append("/Workspace/Users/<user_email>/imperative_open_finance_funds_investiments_transactions_current/autoloader")
@@ -43,7 +42,7 @@ MONETARY_COLUMNS = (
 
 def _cast_columns(batch_df: DataFrame) -> DataFrame:
     return batch_df.withColumns(
-        {c: F.col(c).cast(DecimalType(20, 2)) for c in MONETARY_COLUMNS}
+        {c: F.expr(f"try_cast({c} AS DECIMAL(20, 2))") for c in MONETARY_COLUMNS}
     )
 
 

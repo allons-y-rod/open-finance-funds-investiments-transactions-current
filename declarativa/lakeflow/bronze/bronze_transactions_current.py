@@ -42,7 +42,7 @@ def bronze_transactions_current():
             F.col("transaction.type").alias("type"),
             F.col("transaction.transactionType").alias("transaction_type"),
             F.col("transaction.transactionTypeAdditionalInfo").alias("transaction_type_additional_info"),
-            F.col("transaction.transactionConversionDate").cast("date").alias("transaction_conversion_date"),
+            F.expr("try_to_date(transaction.transactionConversionDate)").alias("transaction_conversion_date"),
             F.col("transaction.transactionQuotaPrice.amount").alias("transaction_quota_price_amount"),
             F.col("transaction.transactionQuotaPrice.currency").alias("transaction_quota_price_currency"),
             F.col("transaction.transactionQuotaQuantity").alias("transaction_quota_quantity"),
@@ -63,7 +63,7 @@ def bronze_transactions_current():
             "ingestion_date",
             "_rescued_data",
             F.date_format(
-                F.col("transaction.transactionConversionDate").cast("date"), "yyyy-MM"
+                F.expr("try_to_date(transaction.transactionConversionDate)"), "yyyy-MM"
             ).alias("transaction_conversion_month")
         )
     )
