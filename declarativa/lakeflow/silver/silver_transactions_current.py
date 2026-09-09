@@ -1,6 +1,5 @@
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
-from pyspark.sql.types import DecimalType
 
 from declarativa.lakeflow.common.rules_module import get_rules
 
@@ -29,14 +28,17 @@ def silver_transactions_current_casted():
         .table(BRONZE_TABLE)
         .withColumns(
             {
-                "transaction_quota_price_amount": F.col("transaction_quota_price_amount").cast(DecimalType(20, 2)),
-                "transaction_quota_quantity": F.col("transaction_quota_quantity").cast(DecimalType(20, 2)),
-                "transaction_value_amount": F.col("transaction_value_amount").cast(DecimalType(20, 2)),
-                "transaction_gross_value_amount": F.col("transaction_gross_value_amount").cast(DecimalType(20, 2)),
-                "income_tax_amount": F.col("income_tax_amount").cast(DecimalType(20, 2)),
-                "financial_transaction_tax_amount": F.col("financial_transaction_tax_amount").cast(DecimalType(20, 2)),
-                "transaction_exit_fee_amount": F.col("transaction_exit_fee_amount").cast(DecimalType(20, 2)),
-                "transaction_net_value_amount": F.col("transaction_net_value_amount").cast(DecimalType(20, 2)),
+                c: F.expr(f"try_cast({c} AS DECIMAL(20, 2))")
+                for c in (
+                    "transaction_quota_price_amount",
+                    "transaction_quota_quantity",
+                    "transaction_value_amount",
+                    "transaction_gross_value_amount",
+                    "income_tax_amount",
+                    "financial_transaction_tax_amount",
+                    "transaction_exit_fee_amount",
+                    "transaction_net_value_amount",
+                )
             }
         )
     )

@@ -1,0 +1,83 @@
+[
+  {
+    "Data": [
+      {
+        "Account": {
+          "AccountId": "EB001000190320558209",
+          "BranchCode": "0001",
+          "BrandName": "Banco Itaú - 1",
+          "CheckDigit": "9",
+          "CompanyCnpj": "59285411000113",
+          "CompeCode": "623",
+          "ConsentId": "ebe5abbb-84d7-4280-a0aa-c42a08556fdf",
+          "Currency": "BRL",
+          "Id": "39fc8c97-3fdb-40e5-889c-d434f34ba968",
+          "Number": "32055820",
+          "Subtype": "INDIVIDUAL",
+          "Type": "CONTA_DEPOSITO_A_VISTA"
+        },
+        "Balances": {
+          "AccountId": "39fc8c97-3fdb-40e5-889c-d434f34ba968",
+          "AutomaticallyInvestedAmount": {
+            "Amount": "0.1700",
+            "Currency": "BRL"
+          },
+          "AvailableAmount": {
+            "Amount": "0.1700",
+            "Currency": "BRL"
+          },
+          "BlockedAmount": {
+            "Amount": "0.1200",
+            "Currency": "BRL"
+          },
+          "UpdateDateTime": "2025-09-10T22:47:22Z"
+        },
+        "OverdraftLimits": {
+          "AccountId": "39fc8c97-3fdb-40e5-889c-d434f34ba968",
+          "OverdraftContractedLimit": {
+            "Amount": "100.0000",
+            "Currency": "BRL"
+          },
+          "OverdraftUsedLimit": {
+            "Amount": "50.5555",
+            "Currency": "BRL"
+          },
+          "UnarrangedOverdraftAmount": {
+            "Amount": "20.0000",
+            "Currency": "BRL"
+          }
+        },
+        "Transactions": [
+          {
+            "AccountId": "19fc8c97-3fdb-40e5-889c-d434f34ba968",
+            "CompletedAuthorisedPaymentType": "TRANSACAO_EFETIVADA",
+            "CreditDebitType": "DEBITO",
+            "Id": "918e20e4-b0c5-453d-8f7c-5fb5ffbaac85",
+            "PartieBranchCode": "0001",
+            "PartieCheckDigit": "9",
+            "PartieCnpjCpf": "47512354486",
+            "PartiePersonType": "PESSOA_NATURAL",
+            "PartieCompeCode": "623",
+            "PartieNumber": "32055820",
+            "TransactionAmount": {
+              "Amount": "20.0000",
+              "Currency": "BRL"
+            },
+            "TransactionDate": "2025-09-07T00:40:30.51Z",
+            "TransactionDateTime": "2025-09-07T00:40:30.510Z",
+            "TransactionId": "0000000000978600150",
+            "TransactionName": "PIX ENVIADO - Luiz Inacio da Silva",
+            "Type": "PIX"
+          }
+        ]
+      }
+    ],
+    "Job": {
+      "user_id": "a53df140-4eb0-451f-aed6-567f0224b4a5",
+      "connection_key": "00000f2d-81ad-4293-945b-d63754e1d599",
+      "report_id": "4bc26d59-be1c-4061-b170-574fc0cff85a",
+      "report_time": "2025-10-24 09:20:28",
+      "type": "account"
+    }
+  }
+]

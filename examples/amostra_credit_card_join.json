@@ -1,0 +1,150 @@
+[
+  {
+    "Data": [
+      {
+        "Account": {
+          "BrandName": "Banco Itaú",
+          "CompanyCnpj": "59285411000113",
+          "ConsentId": "ebe5abbb-84d7-4280-a0aa-c42a08556fdf",
+          "CreditCardAccountId": "00003243383234304431443638303846632364331323536364393746632463643843330353035314553513935393343038",
+          "CreditCardNetwork": "ELO",
+          "NetworkAdditionalInfo": "elo-pró",
+          "Id": "111e83e2-3168-4ece-b79a-7416a3c26d51",
+          "Name": "PAN ELO - 0001",
+          "ProductAdditionalInfo": "PAN ELO BÁSICO - com coração útil e sem limitação",
+          "ProductType": "STANDARD_INTERNACIONAL"
+        },
+        "AccountLimits": [
+          {
+            "AvailableAmount": {
+              "AmountValue": 14.26,
+              "Currency": "BRL"
+            },
+            "ConsolidationType": "CONSOLIDADO",
+            "CreditCardAccountId": "807e83e2-3168-4ece-b79a-7416a3c26d33",
+            "CreditLineLimitType": "LimitE_Crédito_TOTAL",
+            "CustomizedLimitAmount": {
+              "AmountValue": 14.26,
+              "Currency": "BRL"
+            },
+            "Id": "82828e8e-a723-4dea-a16e-dff321132973",
+            "IdentificationNumber": "9390",
+            "IsLimitFlexible": false,
+            "LimitAmount": {
+              "AmountValue": 200,
+              "Currency": "BRL"
+            },
+            "LineName": "Credito_À_VISTA",
+            "LineNameAdditionalInfo": "CRÉDITO_À_vista_para_UTILIZAÇÃO",
+            "UsedAmount": {
+              "AmountValue": 185.74,
+              "Currency": "BRL"
+            }
+          }
+        ],
+        "AccountsBillsTransactions": [
+          {
+            "TransactionId": "b83b67ba-4269-4d67-8214-31982f14eeca",
+            "CreditCardsBillsId": "c75e83e2-3168-4ece-b79a-7416a3c26d5c",
+            "identificationNumber": "4295",
+            "TransactionName": "Compra em supermercado - Av. São Carlos",
+            "ExternalBillId": "20250817",
+            "CreditDebitType": "DEBITO",
+            "TransactionType": "Purchase",
+            "TransactionalAdditionalInfo": "Compra realizada com cartão de débito.",
+            "PaymentType": "SinglePayment",
+            "FeeType": "ServiceFee",
+            "FeeTypeAdditionalInfo": "Tarifa de serviço aplicada à transação",
+            "OtherCreditsType": "Cashback",
+            "OtherCreditsAdditionalInfo": "Crédito de cashback aplicado.",
+            "ChargeIdentificator": 101,
+            "ChargeNumber": 1,
+            "BrazilianAmount": {
+              "Amount": 150.75,
+              "Currency": "BRL"
+            },
+            "Amount": {
+              "Amount": 150.75,
+              "Currency": "BRL"
+            },
+            "TransactionDateTime": "2025-10-20T14:30:00",
+            "BillPostDate": "2025-10-21T10:00:00",
+            "PayeeMCC": 5411
+          }
+        ],
+        "AccountsTransactions": [
+          {
+            "Amount": {
+              "AmountValue": 138.33,
+              "Currency": "BRL"
+            },
+            "BillPostDate": "2025-09-01T03:00:00Z",
+            "BrazilianAmount": {
+              "AmountValue": 138.33,
+              "Currency": "BRL"
+            },
+            "ChargeIdentificator": 1,
+            "ChargeNumber": 1,
+            "CreditCardAccountId": "845283e2-3168-4ece-b79a-7416a3c26d50",
+            "CreditDebitType": "CREDITO",
+            "FeeType": "ANUIDADE",
+            "FeeTypeAdditionalInfo": "Tarifa de serviço aplicada à transação de forma útil",
+            "Id": "852b67ba-4269-4d67-8214-31982f14e369",
+            "IdentificationNumber": "9390",
+            "OtherCreditsAdditionalInfo": "PARCEL LOJISTA-PARC 01 0 - Crédito sem limites",
+            "OtherCreditsType": "CRÉDITO_ROTATIVO",
+            "PayeeMCC": 5999,
+            "PaymentType": "A_VISTA",
+            "TransactionDateTime": "2025-09-01T21:51:59.001Z",
+            "TransactionName": "PAGAMENTO EFETUADO - Liquidação anotada",
+            "BillId": "20250817",
+            "TransactionType": "PAGAMENTO",
+            "TransactionalAdditionalInfo": "Compra realizada com cartão de crédito."
+          }
+        ],
+        "Bills": [
+          {
+            "BillId": "20250817",
+            "BillMinimumAmount": {
+              "AmountValue": 0,
+              "Currency": "BRL"
+            },
+            "BillTotalAmount": {
+              "AmountValue": 0,
+              "Currency": "BRL"
+            },
+            "CreditCardAccountId": "781683e2-3168-4ece-b79a-7416a3c26d58",
+            "CreditCardAccountsBillsId": "20250817",
+            "DueDate": "2025-08-17T03:00:00Z",
+            "FinanceCharges": [
+              {
+                "Amount": 1000500.4552,
+                "Currency": "USD",
+                "Type": "LateFee",
+                "AdditionalInfo": "Cobrança por atraso no pagamento da fatura."
+              }
+            ],
+            "Id": "ed2940fd-e058-4ae6-94af-cfdd6f2e8c97",
+            "IsInstalment": false,
+            "Payments": [
+              {
+                "AmountValue": 30.03,
+                "Currency": "BRL",
+                "PaymentDate": "2025-08-04T03:00:00Z",
+                "PaymentMode": "BOLETO_BANCARIO",
+                "ValueType": "VALOR_PAGAMENTO_FATURA_REALIZADO"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "Job": {
+      "user_id": "e23df140-4eb0-451f-aed6-567f0224b4a4",
+      "connection_key": "00000f2d-81ad-4293-945b-d63754e1d599",
+      "report_id": "7f66ccee-455f-4f61-8d83-f25aefae158f",
+      "report_time": "2025-10-24 09:20:28",
+      "type": "credit_card"
+    }
+  }
+]
